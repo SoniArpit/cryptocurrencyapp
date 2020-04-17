@@ -1,14 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:fluttercrypto/data/crypto_data.dart';
+import 'package:fluttercrypto/modules/crypto_presenter.dart';
 
 class HomePage extends StatefulWidget {
-  final List currencies;
-  HomePage(this.currencies);
   @override
   _HomePageState createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  List currencies;
+class _HomePageState extends State<HomePage> implements CryptoListViewContract {
+  CryptoListPresenter _presenter;
+  List<Crypto> _currencies;
+  bool _isLoading;
+
+  _HomePageState() {
+    _presenter = CryptoListPresenter(this);
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _isLoading = true;
+    _presenter.loadCurrencies();
+  }
+
   final List<MaterialColor> _colors = [
     Colors.blue,
     Colors.indigo,
@@ -21,7 +36,9 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: Text("Crypto App"),
       ),
-      body: _cryptoWidget(),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _cryptoWidget(),
     );
   }
 
@@ -31,9 +48,9 @@ class _HomePageState extends State<HomePage> {
         children: <Widget>[
           Flexible(
             child: ListView.builder(
-              itemCount: widget.currencies.length,
+              itemCount: _currencies.length,
               itemBuilder: (BuildContext context, int index) {
-                final Map currency = widget.currencies[index];
+                final Crypto currency = _currencies[index];
                 final MaterialColor color = _colors[index % _colors.length];
                 return _getListItemUi(currency, color);
               },
@@ -44,51 +61,57 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  ListTile _getListItemUi(Map currency, MaterialColor color) {
+  ListTile _getListItemUi(Crypto currency, MaterialColor color) {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: color,
-        child: Text(currency["name"][0]),
+        child: Text(currency.name[0]),
       ),
       title: Text(
-        currency["name"],
+        currency.name,
         style: TextStyle(
           fontWeight: FontWeight.bold,
         ),
       ),
-      subtitle: _getSubtitleText(
-          currency['volume_1day_usd'], currency['volume_1hrs_usd']),
+      subtitle: _getSubtitleText(currency.exchange_id, currency.website),
       isThreeLine: true,
     );
   }
 
-  Widget _getSubtitleText(double priceUsd, double perChange) {
+  Widget _getSubtitleText(String exchangeId, String website) {
+    print(exchangeId);
     TextSpan priceTextWidget = TextSpan(
-      text: "\$$priceUsd\n",
+      text: "$exchangeId\n",
       style: TextStyle(
         color: Colors.black,
       ),
     );
-    String perChangeText = "1 hour: \$$perChange";
+    String perChangeText = "website: $website";
     TextSpan perChangeWidget;
 
-    if (perChange > 0) {
-      perChangeWidget = TextSpan(
-        text: perChangeText,
-        style: TextStyle(
-          color: Colors.green,
-        ),
-      );
-    } else {
-      perChangeWidget = TextSpan(
-        text: perChangeText,
-        style: TextStyle(
-          color: Colors.red,
-        ),
-      );
-    }
+    perChangeWidget = TextSpan(
+      text: perChangeText,
+      style: TextStyle(
+        color: Colors.green,
+      ),
+    );
+
     return RichText(
       text: TextSpan(children: [priceTextWidget, perChangeWidget]),
     );
+  }
+
+  @override
+  void onLoadCryptoComplete(List<Crypto> items) {
+    // TODO: implement onLoadCryptoComplete
+    setState(() {
+      _currencies = items;
+      _isLoading = false;
+    });
+  }
+
+  @override
+  void onLoadCryptoError() {
+    // TODO: implement onLoadCryptoError
   }
 }
